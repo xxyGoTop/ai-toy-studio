@@ -232,4 +232,7 @@ def build_colored_3mf(settings: Settings, source: Path, dest_3mf: Path, unit_sca
 
 
 def open_studio(settings: Settings, project_file: Path) -> None:
-    subprocess.Popen([settings.bambu_studio_executable, str(project_file)], shell=False)
+    # Bambu Studio 改变自己的工作目录后无法解析相对路径，必须传绝对路径，
+    # 否则会报“加载模型文件失败”并打开空盘。
+    absolute = Path(project_file).resolve()
+    subprocess.Popen([settings.bambu_studio_executable, str(absolute)], shell=False)

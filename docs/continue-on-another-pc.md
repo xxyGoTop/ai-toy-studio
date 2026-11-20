@@ -155,6 +155,8 @@ Stop-Process -Id <进程号> -Force
 
 **Bambu 命令行和图形界面可以同时在。** 这台机器上 GUI 已经开着时，`--export-3mf` 仍然能写出文件。第一次打开图形界面可能有向导，需要在那台电脑上点过去。
 
+**点「导出并打开切片」打开空盘、报「加载模型文件失败」。** `.env` 里 `STORAGE_ROOT=./storage` 是相对路径，`open_studio` 把 `str(project_file)` 直接传给 `bambu-studio.exe`，于是命令行里是 `storage\exports\...` 这种相对路径。Bambu Studio GUI 启动后会切自己的工作目录，相对路径解析不到，就报「加载模型文件失败」并打开空盘；手动导入因为走文件对话框拿到的是绝对路径所以没事。命令行生成 3MF（`subprocess.run`）能成是因为它继承后端 cwd 且 CLI 在切目录前就解析了路径。修复在 `backend/app/services/bambu_color.py` 的 `open_studio`：传给 GUI 前先 `Path(project_file).resolve()` 转成绝对路径。
+
 **删除不要用 `window.confirm`。** 在当前这个内置浏览器里它会直接返回取消，删除按钮看起来没反应。页面和模型的删除是直接执行的。
 
 **Blender 5.3 的材质节点。** `material.use_nodes` 会给弃用警告，5.3 里还能用。Blender 6 会去掉它，到时候 `color_of()` 要改。

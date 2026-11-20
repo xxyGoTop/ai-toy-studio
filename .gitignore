@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+*.db
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+.DS_Store
+*.local
+npm-debug.log*
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Storage runtime files
+storage/projects/**
+storage/source/**
+storage/generated/**
+storage/processed/**
+storage/exports/**
+storage/previews/**
+!storage/projects/.gitkeep
+!storage/source/.gitkeep
+!storage/generated/.gitkeep
+!storage/processed/.gitkeep
+!storage/exports/.gitkeep
+!storage/previews/.gitkeep
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Blender
+*.blend1
+*.blend2

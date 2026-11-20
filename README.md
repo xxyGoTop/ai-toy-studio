@@ -109,6 +109,7 @@ ai-toy-studio/
 
 ## 文档
 
+- [换电脑继续开发](docs/continue-on-another-pc.md)
 - [架构](docs/architecture.md)
 - [API](docs/api.md)
 - [Blender](docs/blender.md)

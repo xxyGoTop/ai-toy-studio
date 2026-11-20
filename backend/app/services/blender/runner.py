@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -56,13 +57,20 @@ class BlenderRunner:
             else:
                 command.append(str(value))
 
+        env = os.environ.copy()
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["PYTHONUTF8"] = "1"
+
         try:
             completed = subprocess.run(
                 command,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=self.settings.blender_timeout_seconds,
                 check=False,
+                env=env,
             )
         except subprocess.TimeoutExpired as exc:
             return BlenderResult(
@@ -73,20 +81,24 @@ class BlenderRunner:
                 data=None,
             )
 
-        payload = self._extract_json(completed.stdout)
+        stdout = completed.stdout or ""
+        stderr = completed.stderr or ""
+        payload = self._extract_json(stdout)
         success = completed.returncode == 0 and not (
             isinstance(payload, dict) and payload.get("success") is False
         )
         return BlenderResult(
             success=success,
             exit_code=completed.returncode,
-            stdout=completed.stdout,
-            stderr=completed.stderr,
+            stdout=stdout,
+            stderr=stderr,
             data=payload,
         )
 
     @staticmethod
     def _extract_json(stdout: str) -> dict | list | None:
+        if not stdout:
+            return None
         lines = [line.strip() for line in stdout.splitlines() if line.strip()]
         for line in reversed(lines):
             if line.startswith("{") or line.startswith("["):

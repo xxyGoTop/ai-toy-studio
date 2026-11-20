@@ -35,8 +35,10 @@ class TripoProvider(Base3DProvider):
         prompt: str | None = None,
         image_path: str | None = None,
     ) -> ProviderTask:
-        if not self.api_key:
-            raise RuntimeError("TRIPO_API_KEY is not configured")
+        if not self.api_key or self.api_key.strip() in {"your_api_key", "your_tripo_api_key"}:
+            raise RuntimeError(
+                "还没有可用的 Tripo API Key。请在项目根目录 .env 把 TRIPO_API_KEY 换成 Tripo 控制台的真实密钥，保存后重启后端。"
+            )
 
         if image_path:
             raise NotImplementedError(

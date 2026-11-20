@@ -20,7 +20,33 @@ def world_corners(meshes):
     ]
 
 
+def root_objects(meshes):
+    roots = []
+    seen = set()
+    for obj in meshes:
+        root = obj
+        while root.parent is not None:
+            root = root.parent
+        if root.name not in seen:
+            seen.add(root.name)
+            roots.append(root)
+    return roots
+
+
+def remove_ground_objects():
+    doomed = []
+    for obj in list(bpy.context.scene.objects):
+        if obj.type != "MESH":
+            continue
+        name = obj.name.lower()
+        if any(token in name for token in ("地面", "ground", "floor", "plane")):
+            doomed.append(obj)
+    for obj in doomed:
+        bpy.data.objects.remove(obj, do_unlink=True)
+
+
 def normalize_model(target_height_mm=100.0):
+    remove_ground_objects()
     meshes = get_mesh_objects()
     if not meshes:
         raise ValueError("No mesh objects found")
@@ -37,14 +63,15 @@ def normalize_model(target_height_mm=100.0):
         raise ValueError("Invalid model dimensions")
 
     scale = (float(target_height_mm) / 1000.0) / height_m
-    for obj in meshes:
+    # 只缩放顶层对象，子级会跟着父级变换，避免父子重复缩放。
+    for obj in root_objects(meshes):
         obj.location *= scale
         obj.scale = [v * scale for v in obj.scale]
 
     bpy.context.view_layer.update()
     corners = world_corners(meshes)
     lowest_z = min(p.z for p in corners)
-    for obj in meshes:
+    for obj in root_objects(meshes):
         obj.location.z -= lowest_z
 
     bpy.context.view_layer.update()
@@ -100,7 +127,17 @@ def main():
 
     ensure_parent(output_file)
     bpy.ops.wm.save_as_mainfile(filepath=output_file)
-    emit({"success": True, "output": output_file, "dimensions_mm": dims})
+
+    preview_file = os.path.splitext(output_file)[0] + ".glb"
+    bpy.ops.export_scene.gltf(filepath=preview_file, export_format="GLB")
+    emit(
+        {
+            "success": True,
+            "output": output_file,
+            "preview": preview_file,
+            "dimensions_mm": dims,
+        }
+    )
 
 
 if __name__ == "__main__":

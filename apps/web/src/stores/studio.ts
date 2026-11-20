@@ -28,11 +28,35 @@ export const useStudioStore = defineStore("studio", () => {
     await selectProject(project.id);
   }
 
+  async function removeProject(projectId: string) {
+    await api.deleteProject(projectId);
+    projects.value = projects.value.filter((item) => item.id !== projectId);
+    if (currentProjectId.value !== projectId) return;
+    currentModel.value = null;
+    models.value = [];
+    report.value = null;
+    generation.value = null;
+    if (projects.value[0]) {
+      await selectProject(projects.value[0].id);
+    } else {
+      currentProjectId.value = null;
+    }
+  }
+
   async function selectProject(projectId: string) {
     currentProjectId.value = projectId;
     models.value = await api.listModels(projectId);
     currentModel.value = models.value[0] || null;
     report.value = null;
+  }
+
+  async function removeModel(modelId: string) {
+    await api.deleteModel(modelId);
+    models.value = models.value.filter((item) => item.id !== modelId);
+    if (currentModel.value?.id === modelId) {
+      currentModel.value = models.value[0] || null;
+      report.value = null;
+    }
   }
 
   async function refreshModels() {
@@ -51,18 +75,28 @@ export const useStudioStore = defineStore("studio", () => {
     }
   }
 
-  async function importFile(file: File) {
+  async function importFile(file: File, companions: File[] = []) {
     if (!currentProjectId.value) throw new Error("请先创建项目");
     const model = await withBusy("导入模型中…", () =>
-      api.importModel(currentProjectId.value!, file),
+      api.importModel(currentProjectId.value!, file, companions),
     );
     await refreshModels();
     currentModel.value = model;
   }
 
+  async function splitCurrent() {
+    if (!currentModel.value) return;
+    const result = await withBusy("正在按颜色拆分，请稍等…", () =>
+      api.splitModel(currentModel.value!.id),
+    );
+    await refreshModels();
+    currentModel.value = result.model;
+    return result;
+  }
+
   async function processCurrent(targetHeight = 100, addBase = false) {
     if (!currentModel.value) return;
-    const model = await withBusy("Blender 标准化处理中…", () =>
+    const model = await withBusy(`正在标准化到 ${targetHeight} mm，请稍等…`, () =>
       api.processModel(currentModel.value!.id, {
         target_height_mm: targetHeight,
         add_base: addBase,
@@ -71,6 +105,7 @@ export const useStudioStore = defineStore("studio", () => {
     );
     await refreshModels();
     currentModel.value = model;
+    return model;
   }
 
   async function validateCurrent() {
@@ -83,6 +118,11 @@ export const useStudioStore = defineStore("studio", () => {
     await refreshModels();
   }
 
+  async function openColoredCurrent() {
+    if (!currentModel.value) return;
+    return withBusy("正在生成彩色切片项目…", () => api.openColoredSlicer(currentModel.value!.id));
+  }
+
   async function exportCurrent() {
     if (!currentModel.value) return;
     const result = await withBusy("导出 STL 中…", () => api.exportModel(currentModel.value!.id));
@@ -91,10 +131,10 @@ export const useStudioStore = defineStore("studio", () => {
     return result;
   }
 
-  async function startGeneration(prompt: string) {
+  async function startGeneration(prompt: string, provider?: string) {
     if (!currentProjectId.value) throw new Error("请先创建项目");
     generation.value = await withBusy("提交 AI 生成任务…", () =>
-      api.createGeneration(currentProjectId.value!, prompt),
+      api.createGeneration(currentProjectId.value!, prompt, provider),
     );
   }
 
@@ -125,11 +165,15 @@ export const useStudioStore = defineStore("studio", () => {
     busy,
     bootstrap,
     createProject,
+    removeProject,
     selectProject,
     refreshModels,
+    removeModel,
     importFile,
+    splitCurrent,
     processCurrent,
     validateCurrent,
+    openColoredCurrent,
     exportCurrent,
     startGeneration,
     pollGeneration,

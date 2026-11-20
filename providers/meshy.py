@@ -34,8 +34,10 @@ class MeshyProvider(Base3DProvider):
         prompt: str | None = None,
         image_path: str | None = None,
     ) -> ProviderTask:
-        if not self.api_key:
-            raise RuntimeError("MESHY_API_KEY is not configured")
+        if not self.api_key or self.api_key.strip() in {"your_api_key", "your_meshy_api_key"}:
+            raise RuntimeError(
+                "还没有可用的 Meshy API Key。请在项目根目录 .env 把 MESHY_API_KEY 换成 Meshy 控制台的真实密钥，保存后重启后端。"
+            )
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             if image_path:
